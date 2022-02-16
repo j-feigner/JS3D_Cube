@@ -12,28 +12,9 @@ function main() {
                     new Point2(200, 200),
                     new Point2(100, 200)];
 
-    var square = new Object2D(new Point2(150, 150), vertices);
-
-    var cube_vertices = [
-        new Point3(0, 0, 1),
-        new Point3(0, 0, 2),
-        new Point3(0, 1, 1),
-        new Point3(0, 1, 2),
-        new Point3(1, 0, 1),
-        new Point3(1, 0, 2),
-        new Point3(1, 1, 1),
-        new Point3(1, 1, 2)
-    ]
-
-    document.addEventListener("keydown", (event) => {
-        var key = event.key;
-
-        if(key === "ArrowLeft") {
-            square.translate(-1, 0);
-        }
-    })
-
     var game = new Game(ctx);
+    game.fps_output = document.querySelector(".fps-counter p");
+    game.player = new Object2D(new Point2(150, 150), vertices);
     game.start();
 
     var stopper = null;
@@ -43,17 +24,35 @@ class Game {
     constructor(ctx) {
         this.ctx = ctx;
         this.last_render = 0;
-        this.fps_output = document.querySelector(".fps-counter p");
+        this.fps_output = null;
+
+        this.player = null;
+
+        this.inputs = {}
 
         this.loop = this.loop.bind(this);
     }
 
     update(progress) {
         this.fps_output.innerHTML = Math.round(1000 / progress);
+
+        if(this.inputs["ArrowLeft"]) {
+            this.player.translate(-1, 0);
+        }
+        if(this.inputs["ArrowUp"]) {
+            this.player.translate(0, 1);
+        }
+        if(this.inputs["ArrowRight"]) {
+            this.player.translate(1, 0);
+        }
+        if(this.inputs["ArrowDown"]) {
+            this.player.translate(0, -1);
+        }
     }
 
     draw() {
-
+        this.ctx.clearRect(0, 0, 1600, 900);
+        this.player.draw(this.ctx);
     }
 
     loop(timestamp) {
@@ -67,6 +66,13 @@ class Game {
     }
 
     start() {
+        window.addEventListener("keydown", (event) => {
+            this.inputs[event.code] = true;
+        })
+        window.addEventListener("keyup", (event) => {
+            this.inputs[event.code] = false;
+        })
+
         window.requestAnimationFrame(this.loop);
     }
 }
@@ -152,11 +158,11 @@ function Object2D(origin, vertices) {
 
     this.translate = function(changeX, changeY) {
         this.origin.x += changeX;
-        this.origin.y += changeY;
+        this.origin.y -= changeY;
 
         this.vertices.forEach(vertex => {
             vertex.x += changeX;
-            vertex.y += changeY;
+            vertex.y -= changeY;
         })
     }
 
