@@ -25,19 +25,50 @@ function main() {
         new Point3(1, 1, 2)
     ]
 
-    var p1 = new Point2(2, 2);
-    var p2 = new Point2(4, 1);
-    var y = linearInterpolation(5, p1, p2);
+    document.addEventListener("keydown", (event) => {
+        var key = event.key;
 
+        if(key === "ArrowLeft") {
+            square.translate(-1, 0);
+        }
+    })
+
+    var game = new Game(ctx);
+    game.start();
 
     var stopper = null;
+}
 
-    // setInterval(() => {
-    //     ctx.clearRect(0, 0, c.width, c.height);
-    //     //square.translate(1, 2);
-    //     //square.rotate(0.01);
-    //     square.draw(ctx);
-    // }, 15)
+class Game {
+    constructor(ctx) {
+        this.ctx = ctx;
+        this.last_render = 0;
+        this.fps_output = document.querySelector(".fps-counter p");
+
+        this.loop = this.loop.bind(this);
+    }
+
+    update(progress) {
+        this.fps_output.innerHTML = Math.round(1000 / progress);
+    }
+
+    draw() {
+
+    }
+
+    loop(timestamp) {
+        var progress = timestamp - this.last_render;
+
+        this.update(progress);
+        this.draw();
+
+        this.last_render = timestamp;
+        window.requestAnimationFrame(this.loop);
+    }
+
+    start() {
+        window.requestAnimationFrame(this.loop);
+    }
 }
 
 function drawVertices(ctx, vertices) {
@@ -110,6 +141,13 @@ function Object2D(origin, vertices) {
         ctx.lineTo(this.vertices[0].x, this.vertices[0].y);
         ctx.closePath();
         ctx.stroke();
+    }
+
+    this.drawOrigin = function(ctx)  {
+        ctx.beginPath();
+        ctx.arc(this.origin.x, this.origin.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.closePath();
     }
 
     this.translate = function(changeX, changeY) {
