@@ -7,16 +7,6 @@ function main() {
     c.style.backgroundColor = "grey";
     ctx.fillStyle = "red";
 
-    var vertices = [new Point2(100, 100), 
-                    new Point2(200, 100), 
-                    new Point2(200, 200),
-                    new Point2(100, 200)];
-
-    var vertices3 = [new Point3(100, 100, 0), 
-                    new Point3(200, 100, 0), 
-                    new Point3(200, 200, 0),
-                    new Point3(100, 200, 0)];
-
     var cube_vertices = [
         new Point3(100, 100, 100),
         new Point3(100, 100, 200),
@@ -42,6 +32,7 @@ function main() {
     var game = new Game(ctx);
     game.fps_output = document.querySelector(".fps-counter p");
     game.player = new Object3D(new Point3(150, 150, 150), cube_vertices, cube_edges);
+    game.camera = new Point3(0, 0, 0);
     game.start();
 
     var stopper = null;
@@ -107,6 +98,7 @@ class Game {
 
     draw() { // Called once per frame
         this.ctx.clearRect(0, 0, 1600, 900);
+        this.player.drawInternals(this.ctx);
         this.player.draw(this.ctx);
     }
 
@@ -129,6 +121,14 @@ class Game {
         })
 
         window.requestAnimationFrame(this.loop);
+    }
+}
+
+class Camera {
+    constructor() {
+        this.position = new Point3;
+        this.rotation = new Point3;
+        this.distance = null;
     }
 }
 
@@ -209,8 +209,13 @@ function Object2D(origin, vertices) {
 }
 
 class Object3D {
-    constructor(origin, vertices, edges) {
-        this.origin = origin;
+    constructor(position, vertices, edges) {
+        this.position = position;
+        this.rotation = {
+            x_axis: new Point3(position.x + 60, position.y, position.z),
+            y_axis: new Point3(position.x, position.y + 60, position.z),
+            z_axis: new Point3(position.x, position.y, position.z + 60)
+        }
         this.vertices = vertices;
         this.edges = edges;
     }
@@ -227,37 +232,104 @@ class Object3D {
         ctx.stroke();
     }
 
-    translate(change_x, change_y, change_z) {
-        this.origin.x += change_x;
-        this.origin.y -= change_y;
-        this.origin.z += change_z;
+    drawInternals(ctx) {
+        // Draw object position
+        ctx.beginPath();
+        ctx.arc(this.position.x, this.position.y, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.closePath();
+
+        // Draw object rotation
+        ctx.beginPath();
+        ctx.strokeStyle = "purple";
+        ctx.moveTo(this.position.x, this.position.y);
+        ctx.lineTo(this.rotation.x_axis.x, this.rotation.x_axis.y);
+        ctx.stroke();
+        ctx.closePath();
+
+        ctx.beginPath();
+        ctx.strokeStyle = "yellow";
+        ctx.moveTo(this.position.x, this.position.y);
+        ctx.lineTo(this.rotation.y_axis.x, this.rotation.y_axis.y);
+        ctx.stroke();
+        ctx.closePath();
+
+        ctx.beginPath();
+        ctx.strokeStyle = "green";
+        ctx.moveTo(this.position.x, this.position.y);
+        ctx.lineTo(this.rotation.z_axis.x, this.rotation.z_axis.y);
+        ctx.stroke();
+        ctx.closePath();
+
+        ctx.strokeStyle = "black";
+
+    }
+
+    translate(dx, dy, dz) {
+        this.position.x += dx;
+        this.position.y -= dy;
+        this.position.z += dz;
 
         this.vertices.forEach(vertex => {
-            vertex.x += change_x;
-            vertex.y -= change_y;
-            vertex.z += change_z;
+            vertex.x += dx;
+            vertex.y -= dy;
+            vertex.z += dz;
         })
+
+        for(const axis in this.rotation) {
+            var vertex = this.rotation[axis];
+            vertex.x += dx;
+            vertex.y -= dy;
+            vertex.z += dz;
+        }
     }
 
     rotate(dx, dy, dz) {
-        this.vertices.forEach(vertex => {
-            var x = vertex.x - this.origin.x;
-            var y = vertex.y - this.origin.y;
-            var z = vertex.z - this.origin.z;
+        this.vertices.forEach(vertex => { //For each point in object
+            // Move point to object origin
+            var x = vertex.x - this.position.x;
+            var y = vertex.y - this.position.y;
+            var z = vertex.z - this.position.z;
 
-            //rotation about x axis
+            //Rotate point about x axis
             var y2 = (y * Math.cos(dx)) - (z * Math.sin(dx));
             var z2 = (z * Math.cos(dx)) + (y * Math.sin(dx));
-            //rotation about y axis
+            //Rotate point about y axis
             var x2 = (x * Math.cos(dy)) + (z2 * Math.sin(dy));
             var z3 = (z2 * Math.cos(dy)) - (x * Math.sin(dy));
-            //rotation about z axis
+            //Rotate point about z axis
             var x3 = (x2 * Math.cos(dz)) - (y2 * Math.sin(dz));
             var y3 = (x2 * Math.sin(dz)) + (y2 * Math.cos(dz));
 
-            vertex.x = x3 + this.origin.x;
-            vertex.y = y3 + this.origin.y;
-            vertex.z = z3 + this.origin.z;
+            // Move point back to original position
+            vertex.x = x3 + this.position.x;
+            vertex.y = y3 + this.position.y;
+            vertex.z = z3 + this.position.z;
         })
+
+        // Update axis rotation vertices for object
+        for(const axis in this.rotation) {
+            var vertex = this.rotation[axis];
+
+            // Move point to object origin
+            var x = vertex.x - this.position.x;
+            var y = vertex.y - this.position.y;
+            var z = vertex.z - this.position.z;
+
+            //Rotate point about x axis
+            var y2 = (y * Math.cos(dx)) - (z * Math.sin(dx));
+            var z2 = (z * Math.cos(dx)) + (y * Math.sin(dx));
+            //Rotate point about y axis
+            var x2 = (x * Math.cos(dy)) + (z2 * Math.sin(dy));
+            var z3 = (z2 * Math.cos(dy)) - (x * Math.sin(dy));
+            //Rotate point about z axis
+            var x3 = (x2 * Math.cos(dz)) - (y2 * Math.sin(dz));
+            var y3 = (x2 * Math.sin(dz)) + (y2 * Math.cos(dz));
+
+            // Move point back to original position
+            vertex.x = x3 + this.position.x;
+            vertex.y = y3 + this.position.y;
+            vertex.z = z3 + this.position.z;
+        }
     }
 }
