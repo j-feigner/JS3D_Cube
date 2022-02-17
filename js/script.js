@@ -12,9 +12,36 @@ function main() {
                     new Point2(200, 200),
                     new Point2(100, 200)];
 
+    var vertices3 = [new Point3(100, 100, 0), 
+                    new Point3(200, 100, 0), 
+                    new Point3(200, 200, 0),
+                    new Point3(100, 200, 0)];
+
+    var cube_vertices = [
+        new Point3(100, 100, 100),
+        new Point3(100, 100, 200),
+        new Point3(100, 200, 100),
+        new Point3(100, 200, 200),
+        new Point3(200, 100, 100),
+        new Point3(200, 100, 200),
+        new Point3(200, 200, 100),
+        new Point3(200, 200, 200)
+    ]
+
+    var cube_edges = [
+        [1, 2, 4],
+        [0, 3, 5],
+        [0, 3, 6],
+        [1, 2, 7],
+        [0, 5, 6],
+        [1, 4, 7],
+        [2, 4, 7],
+        [3, 5, 6]
+    ]
+
     var game = new Game(ctx);
     game.fps_output = document.querySelector(".fps-counter p");
-    game.player = new Object2D(new Point2(150, 150), vertices);
+    game.player = new Object3D(new Point3(150, 150, 150), cube_vertices, cube_edges);
     game.start();
 
     var stopper = null;
@@ -28,6 +55,8 @@ class Game {
 
         this.player = null;
 
+        this.camera = null;
+
         this.inputs = {}
 
         this.loop = this.loop.bind(this);
@@ -37,16 +66,37 @@ class Game {
         this.fps_output.innerHTML = Math.round(1000 / progress);
 
         if(this.inputs["ArrowLeft"]) {
-            this.player.translate(-1, 0);
+            this.player.translate(-3, 0, 0);
         }
         if(this.inputs["ArrowUp"]) {
-            this.player.translate(0, 1);
+            this.player.translate(0, 3, 0);
         }
         if(this.inputs["ArrowRight"]) {
-            this.player.translate(1, 0);
+            this.player.translate(3, 0, 0);
         }
         if(this.inputs["ArrowDown"]) {
-            this.player.translate(0, -1);
+            this.player.translate(0, -3, 0);
+        }
+
+        if(this.inputs["KeyM"]) {
+            this.player.rotate(0, 0, 0.01);
+        }
+        if(this.inputs["KeyN"]) {
+            this.player.rotate(0, 0, -0.01);
+        }
+
+        if(this.inputs["KeyJ"]) {
+            this.player.rotate(0, 0.01, 0);
+        }
+        if(this.inputs["KeyH"]) {
+            this.player.rotate(0, -0.01, 0);
+        }
+
+        if(this.inputs["KeyU"]) {
+            this.player.rotate(0.01, 0, 0);
+        }
+        if(this.inputs["KeyY"]) {
+            this.player.rotate(-0.01, 0, 0);
         }
     }
 
@@ -178,6 +228,60 @@ function Object2D(origin, vertices) {
 
             vertex.x = x2 + this.origin.x;
             vertex.y = y2 + this.origin.y;
+        })
+    }
+}
+
+class Object3D {
+    constructor(origin, vertices, edges) {
+        this.origin = origin;
+        this.vertices = vertices;
+        this.edges = edges;
+    }
+
+    draw(ctx) {
+        ctx.beginPath();
+        this.edges.forEach((vertex, index) => {
+            vertex.forEach(connection => {
+                ctx.moveTo(this.vertices[index].x, this.vertices[index].y);
+                ctx.lineTo(this.vertices[connection].x, this.vertices[connection].y);
+            })
+        })
+        ctx.closePath();
+        ctx.stroke();
+    }
+
+    translate(change_x, change_y, change_z) {
+        this.origin.x += change_x;
+        this.origin.y -= change_y;
+        this.origin.z += change_z;
+
+        this.vertices.forEach(vertex => {
+            vertex.x += change_x;
+            vertex.y -= change_y;
+            vertex.z += change_z;
+        })
+    }
+
+    rotate(dx, dy, dz) {
+        this.vertices.forEach(vertex => {
+            var x = vertex.x - this.origin.x;
+            var y = vertex.y - this.origin.y;
+            var z = vertex.z - this.origin.z;
+
+            //rotation about x axis
+            var y2 = (y * Math.cos(dx)) - (z * Math.sin(dx));
+            var z2 = (z * Math.cos(dx)) + (y * Math.sin(dx));
+            //rotation about y axis
+            var x2 = (x * Math.cos(dy)) + (z2 * Math.sin(dy));
+            var z3 = (z2 * Math.cos(dy)) - (x * Math.sin(dy));
+            //rotation about z axis
+            var x3 = (x2 * Math.cos(dz)) - (y2 * Math.sin(dz));
+            var y3 = (x2 * Math.sin(dz)) + (y2 * Math.cos(dz));
+
+            vertex.x = x3 + this.origin.x;
+            vertex.y = y3 + this.origin.y;
+            vertex.z = z3 + this.origin.z;
         })
     }
 }
