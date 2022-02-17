@@ -54,44 +54,49 @@ class Game {
         this.fps_output = null;
 
         this.player = null;
-
         this.camera = null;
 
         this.inputs = {}
 
-        this.loop = this.loop.bind(this);
+        this.loop = this.loop.bind(this); // Binding needed for window.RequestFrameAnimation()
     }
 
-    update(progress) {
+    update(progress) { // Called once per frame
         this.fps_output.innerHTML = Math.round(1000 / progress);
 
-        if(this.inputs["ArrowLeft"]) {
+        // Directional inputs (WASD + QE)
+        if(this.inputs["KeyA"]) {
             this.player.translate(-3, 0, 0);
         }
-        if(this.inputs["ArrowUp"]) {
+        if(this.inputs["KeyW"]) {
             this.player.translate(0, 3, 0);
         }
-        if(this.inputs["ArrowRight"]) {
+        if(this.inputs["KeyD"]) {
             this.player.translate(3, 0, 0);
         }
-        if(this.inputs["ArrowDown"]) {
+        if(this.inputs["KeyS"]) {
             this.player.translate(0, -3, 0);
         }
+        if(this.inputs["KeyQ"]) {
+            this.player.translate(0, 0, -3);
+        }
+        if(this.inputs["KeyE"]) {
+            this.player.translate(0, 0, 3);
+        }
 
+        // Rotational inputs (X-axis YU, Y-axis HJ, Z-axis NM)
         if(this.inputs["KeyM"]) {
             this.player.rotate(0, 0, 0.01);
         }
         if(this.inputs["KeyN"]) {
             this.player.rotate(0, 0, -0.01);
         }
-
         if(this.inputs["KeyJ"]) {
             this.player.rotate(0, 0.01, 0);
         }
         if(this.inputs["KeyH"]) {
             this.player.rotate(0, -0.01, 0);
         }
-
         if(this.inputs["KeyU"]) {
             this.player.rotate(0.01, 0, 0);
         }
@@ -100,12 +105,12 @@ class Game {
         }
     }
 
-    draw() {
+    draw() { // Called once per frame
         this.ctx.clearRect(0, 0, 1600, 900);
         this.player.draw(this.ctx);
     }
 
-    loop(timestamp) {
+    loop(timestamp) { // Called once per frame
         var progress = timestamp - this.last_render;
 
         this.update(progress);
@@ -127,39 +132,6 @@ class Game {
     }
 }
 
-function drawVertices(ctx, vertices) {
-    ctx.clearRect(0, 0, 1600, 900);
-    ctx.beginPath();
-    ctx.moveTo(vertices[0].x, vertices[0].y)
-    for(var i = 1; i < vertices.length; i++) {
-        ctx.lineTo(vertices[i].x, vertices[i].y);
-    }
-    ctx.lineTo(vertices[0].x, vertices[0].y);
-    ctx.closePath();
-    ctx.fill();
-}
-
-function translate(vertices, changeX, changeY) {
-    vertices.forEach(vertex => {
-        vertex.x += changeX;
-        vertex.y += changeY;
-    })
-}
-
-function rotate(vertices, about, theta) {
-    vertices.forEach(vertex => {
-        // Modify x, y with respect to origin
-        var x = vertex.x - about.x;
-        var y = vertex.y - about.y;
-        // Perform matrix rotation with respect to origin
-        var x2 = (x * Math.cos(theta)) - (y * Math.sin(theta));
-        var y2 = (x * Math.sin(theta)) + (y * Math.cos(theta));
-        // Modify x, y with respect to about
-        vertex.x = x2 + about.x;
-        vertex.y = y2 + about.y;
-    })
-}
-
 function perspectiveProjection(viewer, vertices) {
     var v = new Point2(0, 0);
 
@@ -172,16 +144,20 @@ function linearInterpolation(x, p1, p2) {
 }
 
 // 2D Cartesian point value
-function Point2(x, y) {
-    this.x = x;
-    this.y = y;
+class Point2 {
+    constructor(x, y) {
+        this.x = x;
+        this.y = y;
+    }
 }
 
 // 3D Cartesian point value
-function Point3(x, y, z) {
-    this.x = x;
-    this.y = y;
-    this.z = z;
+class Point3 {
+    constructor(x, y, z) {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+    }
 }
 
 function Object2D(origin, vertices) {
