@@ -19,21 +19,42 @@ function main() {
     ]
 
     var cube_edges = [
-        [1, 2, 4],
-        [0, 3, 5],
-        [0, 3, 6],
-        [1, 2, 7],
-        [0, 5, 6],
-        [1, 4, 7],
-        [2, 4, 7],
-        [3, 5, 6]
+        [1, 3, 4],
+        [0, 2, 5],
+        [1, 3, 6],
+        [0, 2, 7],
+        [0, 5, 7],
+        [1, 4, 6],
+        [2, 5, 7],
+        [3, 4, 6]
     ]
 
-    var game = new Game(ctx);
-    game.fps_output = document.querySelector(".fps-counter p");
-    game.player = new Object3D(new Point3(150, 150, 150), cube_vertices, cube_edges);
-    game.camera = new Point3(0, 0, 0);
-    game.start();
+    var cube_vertex_positions = [
+        new Point3(-10, 10, 100),
+        new Point3(-10, 10, 120),
+        new Point3(10, 10, 120),
+        new Point3(10, 10, 100),
+        new Point3(-10, -10, 100),
+        new Point3(-10, -10, 120),
+        new Point3(10, -10, 120),
+        new Point3(10, -10, 100)
+    ]
+
+    var screen_distance = 100;
+    var camera_position = new Point3(0, 0, 0);
+
+    var point_perspective_game  = new Game(ctx);
+    point_perspective_game.fps_output = document.querySelector(".fps-counter p");
+    point_perspective_game.player = new Object3D(new Point3(0, 0, 110), cube_vertex_positions, cube_edges);
+    point_perspective_game.camera_position = new Point3(0, 0, 0);
+    point_perspective_game.screen_distance = 100;
+    point_perspective_game.start();
+
+    //var game = new Game(ctx);
+    //game.fps_output = document.querySelector(".fps-counter p");
+    //game.player = new Object3D(new Point3(150, 150, 150), cube_vertices, cube_edges);
+    //game.camera = new Point3(0, 0, 0);
+    //game.start();
 
     var stopper = null;
 }
@@ -45,7 +66,8 @@ class Game {
         this.fps_output = null;
 
         this.player = null;
-        this.camera = null;
+        this.camera_position = null;
+        this.screen_distance = null;
 
         this.inputs = {}
 
@@ -98,8 +120,34 @@ class Game {
 
     draw() { // Called once per frame
         this.ctx.clearRect(0, 0, 1600, 900);
-        this.player.drawInternals(this.ctx);
-        this.player.draw(this.ctx);
+
+        var vertex_screen_positions = [];
+
+        this.player.vertices.forEach(vertex => {
+            // Interpolate x value
+            var p1 = new Point2(this.camera_position.x, this.camera_position.z);
+            var p2 = new Point2(vertex.x, vertex.z);
+            var x = linearInterpolationX(this.screen_distance, p1, p2);
+            // Interpolate y value
+            var p1 = new Point2(this.camera_position.y, this.camera_position.z);
+            var p2 = new Point2(vertex.y, vertex.z);
+            var y = linearInterpolationX(this.screen_distance, p1, p2);
+
+            var x_normal = (x / 160 * 1600) + 800;
+            var y_normal = (y / 90 * 900) + 450;
+
+            vertex_screen_positions.push(new Point2(x_normal, y_normal));
+        })
+
+        this.ctx.beginPath();
+        this.player.edges.forEach((vertex, index) => {
+            vertex.forEach(connection => {
+                this.ctx.moveTo(vertex_screen_positions[index].x, vertex_screen_positions[index].y);
+                this.ctx.lineTo(vertex_screen_positions[connection].x, vertex_screen_positions[connection].y);
+            })
+        })
+        this.ctx.closePath();
+        this.ctx.stroke();
     }
 
     loop(timestamp) { // Called once per frame
@@ -139,8 +187,13 @@ function perspectiveProjection(viewer, vertices) {
 }
 
 // Returns y value at x on the line between p1 and p2
-function linearInterpolation(x, p1, p2) {
+function linearInterpolationY(x, p1, p2) {
     return p1.y + ((x - p1.x) * ((p2.y - p1.y) / (p2.x - p1.x)));
+}
+
+// Returns x value at y on the line between p1 and p2
+function linearInterpolationX(y, p1, p2) {
+    return p1.x + ((p2.x - p1.x) * (y - p1.y) / (p2.y - p1.y));
 }
 
 // 2D Cartesian point value
@@ -235,7 +288,7 @@ class Object3D {
     drawInternals(ctx) {
         // Draw object position
         ctx.beginPath();
-        ctx.arc(this.position.x, this.position.y, 2, 0, Math.PI * 2);
+        ctx.arc(this.position.x, this.position.y, 4, 0, Math.PI * 2);
         ctx.fill();
         ctx.closePath();
 
