@@ -1,33 +1,25 @@
 window.onload = main;
 
+var screen_width = 1600;
+var screen_height = 900;
+
+var colors = [
+    "red",
+    "green",
+    "blue",
+    "purple",
+    "yellow",
+    "pink",
+    "orange",
+    "white"
+]
+
 function main() {
     var c = document.getElementById("viewport");
     var ctx = c.getContext("2d");
 
     c.style.backgroundColor = "grey";
     ctx.fillStyle = "red";
-
-    var cube_vertices = [
-        new Point3(100, 100, 100),
-        new Point3(100, 100, 200),
-        new Point3(100, 200, 100),
-        new Point3(100, 200, 200),
-        new Point3(200, 100, 100),
-        new Point3(200, 100, 200),
-        new Point3(200, 200, 100),
-        new Point3(200, 200, 200)
-    ]
-
-    var cube_edges = [
-        [1, 3, 4],
-        [0, 2, 5],
-        [1, 3, 6],
-        [0, 2, 7],
-        [0, 5, 7],
-        [1, 4, 6],
-        [2, 5, 7],
-        [3, 4, 6]
-    ]
 
     var cube_vertex_positions = [
         new Point3(-10, 10, 100),
@@ -40,21 +32,41 @@ function main() {
         new Point3(10, -10, 100)
     ]
 
-    var screen_distance = 100;
-    var camera_position = new Point3(0, 0, 0);
+    var cube_edge_relationships = [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 0],
+        [4, 5],
+        [5, 6],
+        [6, 7],
+        [7, 4],
+        [0, 4],
+        [1, 5],
+        [2, 6],
+        [3, 7]
+    ]
+
+    var cube_faces = [
+        [0, 1, 2, 3],
+        [0, 1, 5, 4],
+        [0, 3, 7, 4],
+        [1, 2, 6, 5],
+        [2, 3, 7, 6],
+        [4, 5, 6, 7]
+    ]
 
     var point_perspective_game  = new Game(ctx);
+
     point_perspective_game.fps_output = document.querySelector(".fps-counter p");
-    point_perspective_game.player = new Object3D(new Point3(0, 0, 110), cube_vertex_positions, cube_edges);
+
+    point_perspective_game.player = new Object3D(new Point3(0, 0, 110), cube_vertex_positions, cube_edge_relationships);
+    point_perspective_game.player.faces = cube_faces;
+
     point_perspective_game.camera_position = new Point3(0, 0, 0);
     point_perspective_game.screen_distance = 100;
-    point_perspective_game.start();
 
-    //var game = new Game(ctx);
-    //game.fps_output = document.querySelector(".fps-counter p");
-    //game.player = new Object3D(new Point3(150, 150, 150), cube_vertices, cube_edges);
-    //game.camera = new Point3(0, 0, 0);
-    //game.start();
+    point_perspective_game.start();
 
     var stopper = null;
 }
@@ -79,22 +91,22 @@ class Game {
 
         // Directional inputs (WASD + QE)
         if(this.inputs["KeyA"]) {
-            this.player.translate(-3, 0, 0);
+            this.player.translate(-1, 0, 0);
         }
         if(this.inputs["KeyW"]) {
-            this.player.translate(0, 3, 0);
+            this.player.translate(0, 1, 0);
         }
         if(this.inputs["KeyD"]) {
-            this.player.translate(3, 0, 0);
+            this.player.translate(1, 0, 0);
         }
         if(this.inputs["KeyS"]) {
-            this.player.translate(0, -3, 0);
+            this.player.translate(0, -1, 0);
         }
         if(this.inputs["KeyQ"]) {
-            this.player.translate(0, 0, -3);
+            this.player.translate(0, 0, -1);
         }
         if(this.inputs["KeyE"]) {
-            this.player.translate(0, 0, 3);
+            this.player.translate(0, 0, 1);
         }
 
         // Rotational inputs (X-axis YU, Y-axis HJ, Z-axis NM)
@@ -119,10 +131,11 @@ class Game {
     }
 
     draw() { // Called once per frame
-        this.ctx.clearRect(0, 0, 1600, 900);
+        // Clear screen
+        this.ctx.clearRect(0, 0, screen_width, screen_height);
 
+        // Perspective Projection Math
         var vertex_screen_positions = [];
-
         this.player.vertices.forEach(vertex => {
             // Interpolate x value
             var p1 = new Point2(this.camera_position.x, this.camera_position.z);
@@ -132,29 +145,85 @@ class Game {
             var p1 = new Point2(this.camera_position.y, this.camera_position.z);
             var p2 = new Point2(vertex.y, vertex.z);
             var y = linearInterpolationX(this.screen_distance, p1, p2);
-
-            var x_normal = (x / 160 * 1600) + 800;
-            var y_normal = (y / 90 * 900) + 450;
+            // Normalize xy coordinates to screen
+            var x_normal = (x / 160 * screen_width) + (screen_width / 2);
+            var y_normal = (y / 90 * screen_height) + (screen_height / 2);
 
             vertex_screen_positions.push(new Point2(x_normal, y_normal));
         })
 
+        // Draw wireframe from edge list using projected vertex array
         this.ctx.beginPath();
-        this.player.edges.forEach((vertex, index) => {
-            vertex.forEach(connection => {
-                this.ctx.moveTo(vertex_screen_positions[index].x, vertex_screen_positions[index].y);
-                this.ctx.lineTo(vertex_screen_positions[connection].x, vertex_screen_positions[connection].y);
-            })
+        this.player.edges.forEach(edge => {
+            var v1 = vertex_screen_positions[edge[0]];
+            var v2 = vertex_screen_positions[edge[1]];
+
+            this.ctx.moveTo(v1.x, v1.y);
+            this.ctx.lineTo(v2.x, v2.y)
         })
         this.ctx.closePath();
         this.ctx.stroke();
+    }
+
+    drawFaces() {
+        // Clear screen
+        this.ctx.clearRect(0, 0, screen_width, screen_height);
+
+        // Sort vertices by distance from camera
+        var sorted_vertices = this.player.vertices.slice();
+        sorted_vertices.sort((a, b) => {
+            if(a.z > b.z) {
+                return -1;
+            }
+            if(a.z < b.z) {
+                return 1;
+            }
+            return 0;
+        })
+
+        // Perspective Projection Math
+        var vertex_screen_positions = [];
+        this.player.vertices.forEach(vertex => {
+            // Interpolate x value
+            var p1 = new Point2(this.camera_position.x, this.camera_position.z);
+            var p2 = new Point2(vertex.x, vertex.z);
+            var x = linearInterpolationX(this.screen_distance, p1, p2);
+            // Interpolate y value
+            var p1 = new Point2(this.camera_position.y, this.camera_position.z);
+            var p2 = new Point2(vertex.y, vertex.z);
+            var y = linearInterpolationX(this.screen_distance, p1, p2);
+            // Normalize xy coordinates to screen
+            var x_normal = (x / 160 * screen_width) + (screen_width / 2);
+            var y_normal = (y / 90 * screen_height) + (screen_height / 2);
+
+            vertex_screen_positions.push(new Point2(x_normal, y_normal));
+        })
+
+        // Draw faces from face list using projected vertex array
+        this.player.faces.forEach((face, index) => {
+            var v1 = vertex_screen_positions[face[0]];
+            var v2 = vertex_screen_positions[face[1]];
+            var v3 = vertex_screen_positions[face[2]];
+            var v4 = vertex_screen_positions[face[3]];
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(v1.x, v1.y);
+            this.ctx.lineTo(v2.x, v2.y);
+            this.ctx.lineTo(v3.x, v3.y);
+            this.ctx.lineTo(v4.x, v4.y);
+            this.ctx.lineTo(v1.x, v1.y);
+            this.ctx.closePath();
+
+            this.ctx.fillStyle = colors[index];
+            this.ctx.fill();
+        })
     }
 
     loop(timestamp) { // Called once per frame
         var progress = timestamp - this.last_render;
 
         this.update(progress);
-        this.draw();
+        this.drawFaces();
 
         this.last_render = timestamp;
         window.requestAnimationFrame(this.loop);
@@ -271,18 +340,7 @@ class Object3D {
         }
         this.vertices = vertices;
         this.edges = edges;
-    }
-
-    draw(ctx) {
-        ctx.beginPath();
-        this.edges.forEach((vertex, index) => {
-            vertex.forEach(connection => {
-                ctx.moveTo(this.vertices[index].x, this.vertices[index].y);
-                ctx.lineTo(this.vertices[connection].x, this.vertices[connection].y);
-            })
-        })
-        ctx.closePath();
-        ctx.stroke();
+        this.faces  = null;
     }
 
     drawInternals(ctx) {
