@@ -184,19 +184,8 @@ class Game {
         // Perspective Projection Math
         var vertex_screen_positions = [];
         this.player.vertices.forEach(vertex => {
-            // Interpolate x value
-            var p1 = new Point2(this.camera_position.x, this.camera_position.z);
-            var p2 = new Point2(vertex.x, vertex.z);
-            var x = linearInterpolationX(this.screen_distance, p1, p2);
-            // Interpolate y value
-            var p1 = new Point2(this.camera_position.y, this.camera_position.z);
-            var p2 = new Point2(vertex.y, vertex.z);
-            var y = linearInterpolationX(this.screen_distance, p1, p2);
-            // Normalize xy coordinates to screen
-            var x_normal = (x / 160 * screen_width) + (screen_width / 2);
-            var y_normal = (y / 90 * screen_height) + (screen_height / 2);
-
-            vertex_screen_positions.push(new Point2(x_normal, y_normal));
+            var projected_vertex = perspectiveProjection(this.camera_position, vertex, this.screen_distance);
+            vertex_screen_positions.push(projected_vertex);
         })
 
         // Draw faces from face list using projected vertex array
@@ -219,6 +208,10 @@ class Game {
         })
     }
 
+    rasterize(ctx) {
+
+    }
+
     loop(timestamp) { // Called once per frame
         var progress = timestamp - this.last_render;
 
@@ -239,30 +232,6 @@ class Game {
 
         window.requestAnimationFrame(this.loop);
     }
-}
-
-class Camera {
-    constructor() {
-        this.position = new Point3;
-        this.rotation = new Point3;
-        this.distance = null;
-    }
-}
-
-function perspectiveProjection(viewer, vertices) {
-    var v = new Point2(0, 0);
-
-    v.x = 0;
-}
-
-// Returns y value at x on the line between p1 and p2
-function linearInterpolationY(x, p1, p2) {
-    return p1.y + ((x - p1.x) * ((p2.y - p1.y) / (p2.x - p1.x)));
-}
-
-// Returns x value at y on the line between p1 and p2
-function linearInterpolationX(y, p1, p2) {
-    return p1.x + ((p2.x - p1.x) * (y - p1.y) / (p2.y - p1.y));
 }
 
 // 2D Cartesian point value
@@ -443,4 +412,32 @@ class Object3D {
             vertex.z = z3 + this.position.z;
         }
     }
+}
+
+// Returns Point2 representing a given Point3 in world space being
+// projected onto the camera plane
+function perspectiveProjection(camera, vertex, screen_distance) {
+    // Interpolate x value
+    var p1 = new Point2(camera.x, camera.z);
+    var p2 = new Point2(vertex.x, vertex.z);
+    var x = linearInterpolationX(screen_distance, p1, p2);
+    // Interpolate y value
+    var p1 = new Point2(camera.y, camera.z);
+    var p2 = new Point2(vertex.y, vertex.z);
+    var y = linearInterpolationX(screen_distance, p1, p2);
+    // Normalize xy coordinates to screen width/height
+    var x_normal = (x / 160 * screen_width) + (screen_width / 2);
+    var y_normal = (y / 90 * screen_height) + (screen_height / 2);
+
+    return new Point2(x_normal, y_normal);
+}
+
+// Returns y value at x on the line between p1 and p2
+function linearInterpolationY(x, p1, p2) {
+    return p1.y + ((x - p1.x) * ((p2.y - p1.y) / (p2.x - p1.x)));
+}
+
+// Returns x value at y on the line between p1 and p2
+function linearInterpolationX(y, p1, p2) {
+    return p1.x + ((p2.x - p1.x) * (y - p1.y) / (p2.y - p1.y));
 }
