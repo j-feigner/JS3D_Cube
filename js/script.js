@@ -1,7 +1,7 @@
 window.onload = main;
 
-var screen_width = 1600;
-var screen_height = 900;
+var screen_width = 960;
+var screen_height = 540;
 
 var colors = [
     "red",
@@ -18,7 +18,6 @@ function main() {
     var c = document.getElementById("viewport");
     var ctx = c.getContext("2d");
 
-    c.style.backgroundColor = "grey";
     ctx.fillStyle = "red";
 
     var cube_vertex_positions = [
@@ -74,6 +73,7 @@ function main() {
 class Game {
     constructor(ctx) {
         this.ctx = ctx;
+        this.i_buffer = null;
         this.last_render = 0;
         this.fps_output = null;
 
@@ -146,8 +146,8 @@ class Game {
             var p2 = new Point2(vertex.y, vertex.z);
             var y = linearInterpolationX(this.screen_distance, p1, p2);
             // Normalize xy coordinates to screen
-            var x_normal = (x / 160 * screen_width) + (screen_width / 2);
-            var y_normal = (y / 90 * screen_height) + (screen_height / 2);
+            var x_normal = (x / 96 * screen_width) + (screen_width / 2);
+            var y_normal = (y / 54 * screen_height) + (screen_height / 2);
 
             vertex_screen_positions.push(new Point2(x_normal, y_normal));
         })
@@ -209,20 +209,26 @@ class Game {
     }
 
     rasterize(ctx) {
-
+        // Loop through all pixels in image
     }
 
     loop(timestamp) { // Called once per frame
         var progress = timestamp - this.last_render;
 
         this.update(progress);
-        this.drawFaces();
+        //this.drawFaces();
+        this.draw();
 
         this.last_render = timestamp;
         window.requestAnimationFrame(this.loop);
     }
 
     start() {
+        var buffer_canvas = document.createElement("canvas");
+        buffer_canvas.width = screen_width;
+        buffer_canvas.height = screen_height;
+        this.i_buffer = buffer_canvas.getContext("2d");
+
         window.addEventListener("keydown", (event) => {
             this.inputs[event.code] = true;
         })
